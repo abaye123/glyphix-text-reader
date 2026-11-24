@@ -38,3 +38,7 @@ gx emulate -d dtg1-emu-466x466 --target=com.abaye.reader
 In the emulator the files go to `.glyphix-work/image/dtg1-emu-466x466/data/mass/texts/`.
 
 The package is free (no menu slot of its own): it needs a `gui/pkgs.db` entry and a launcher that opens it.
+
+## License
+
+Personal, non-commercial use. Anything you share that is based on this project must be published as open source under the same license. Commercial use requires prior written permission. See [LICENSE](LICENSE).
