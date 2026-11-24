@@ -1,0 +1,21 @@
+{
+  "package": "com.abaye.reader",
+  "name": "קורא טקסטים",
+  "icon": "/assets/icon.png",
+  "versionName": "0.1.0",
+  "versionCode": 100,
+  "features": [],
+  "permissions": [
+    { "name": "watch.permission.SYSTEM" }
+  ],
+  "router": {
+    "entry": "main",
+    "pages": {
+      "main": { "component": "index" },
+      "reader": { "component": "index" },
+      "menu": { "component": "index" },
+      "search": { "component": "index" }
+    }
+  },
+  "config": { "designWidth": 466 }
+}

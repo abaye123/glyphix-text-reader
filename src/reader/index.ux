@@ -1,0 +1,191 @@
+<template>
+  <div class="root">
+    <scroll if="{{visible}}" class="page">
+      <div class="top-space"></div>
+      <text class="title">{{title}}</text>
+      <div class="menu-btn" on:click="menu"><text class="btn-text">{{progress}}</text></div>
+      <div if="{{size === 0}}" class="body">
+        <div for="p in items" class="para">
+          <text if="{{p.hit}}" class="s0 hit">{{p.text}}</text>
+          <text if="{{!p.hit}}" class="s0">{{p.text}}</text>
+          <div if="{{p.last}}" class="gap"></div>
+        </div>
+      </div>
+      <div if="{{size === 1}}" class="body">
+        <div for="p in items" class="para">
+          <text if="{{p.hit}}" class="s1 hit">{{p.text}}</text>
+          <text if="{{!p.hit}}" class="s1">{{p.text}}</text>
+          <div if="{{p.last}}" class="gap"></div>
+        </div>
+      </div>
+      <div if="{{size === 2}}" class="body">
+        <div for="p in items" class="para">
+          <text if="{{p.hit}}" class="s2 hit">{{p.text}}</text>
+          <text if="{{!p.hit}}" class="s2">{{p.text}}</text>
+          <div if="{{p.last}}" class="gap"></div>
+        </div>
+      </div>
+      <div if="{{size === 3}}" class="body">
+        <div for="p in items" class="para">
+          <text if="{{p.hit}}" class="s3 hit">{{p.text}}</text>
+          <text if="{{!p.hit}}" class="s3">{{p.text}}</text>
+          <div if="{{p.last}}" class="gap"></div>
+        </div>
+      </div>
+      <text if="{{error}}" class="error">{{error}}</text>
+      <div class="bar">
+        <div class="nav" on:click="turn(1)"><text class="btn-text">הבא</text></div>
+        <div class="nav" on:click="menu"><text class="btn-text">תפריט</text></div>
+        <div class="nav" on:click="turn(-1)"><text class="btn-text">הקודם</text></div>
+      </div>
+      <div class="bottom-space"></div>
+    </scroll>
+  </div>
+</template>
+
+<style>
+  .root { width: 466px; height: 466px; background-color: #000000; }
+  .page {
+    width: 466px;
+    height: 466px;
+    background-color: #000000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .top-space { width: 10px; height: 40px; }
+  .bottom-space { width: 10px; height: 100px; }
+  .title {
+    width: 240px;
+    font-size: 22px;
+    color: #62c8ff;
+    text-align: center;
+    max-lines: 1;
+    text-overflow: ellipsis;
+  }
+  .menu-btn {
+    width: 200px;
+    height: 46px;
+    margin: 6px 0 10px 0;
+    border-radius: 23px;
+    background-color: #1e1e2c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .body { width: 370px; display: flex; flex-direction: column; }
+  .para { width: 370px; display: flex; flex-direction: column; }
+  .gap { width: 10px; height: 12px; }
+  .s0 { width: 370px; font-size: 24px; color: #f0f0f0; text-align: left; }
+  .s1 { width: 370px; font-size: 30px; color: #f0f0f0; text-align: left; }
+  .s2 { width: 370px; font-size: 36px; color: #f0f0f0; text-align: left; }
+  .s3 { width: 370px; font-size: 44px; color: #f0f0f0; text-align: left; }
+  .hit { color: #ffd65a; }
+  .error { width: 330px; font-size: 26px; color: #ff9080; text-align: center; }
+  .bar { width: 370px; height: 72px; margin-top: 12px; display: flex; flex-direction: row; justify-content: center; }
+  .nav {
+    width: 112px;
+    height: 68px;
+    margin: 0 5px;
+    border-radius: 34px;
+    background-color: #0f3a52;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn-text { font-size: 24px; color: #ffffff; text-align: center; }
+</style>
+
+<script>
+  import router from '@system.router'
+  import { openFile, loadPage, pageOf, pause } from '../lib/files.js'
+  import { wrapLines } from '../lib/wrap.js'
+  import { pageCount } from '../lib/text.js'
+  import { st, nav, loadState, positionOf, setPosition, saveNow } from '../lib/store.js'
+
+  const FONT_PX = [24, 30, 36, 44]
+  const LINE_PX = 366
+
+  export default {
+    data: { title: '', progress: '', size: 1, items: [], visible: false, error: '' },
+    f: null,
+    paras: [],
+    k: 0,
+    busy: false,
+    // Not async itself: the page is not presented, and its timers do not run,
+    // until a Promise returned from onShow settles.
+    onShow() {
+      this.enter()
+    },
+    async enter() {
+      if (this.busy) return
+      this.busy = true
+      try {
+        await loadState()
+        if (this.size !== st.size) {
+          this.size = st.size
+          this.layout()
+        }
+        const path = nav.path
+        if (!this.f || this.f.path !== path) {
+          this.f = await openFile(path)
+          this.title = path.slice(path.lastIndexOf('/') + 1).replace(/\.[^.]+$/, '')
+          if (this.f && nav.target === null) nav.target = positionOf(path)
+        }
+        if (!this.f) {
+          this.error = 'לא ניתן לפתוח את הקובץ'
+          this.visible = true
+        } else if (nav.target !== null) {
+          const target = nav.target
+          nav.target = null
+          await this.display(await pageOf(this.f, target))
+        }
+      } catch (e) {
+        console.info('[reader] show failed: ' + e)
+      }
+      this.busy = false
+    },
+    onHide() {
+      saveNow()
+    },
+    async display(k) {
+      const p = await loadPage(this.f, k)
+      const hit = nav.hit && nav.hit.path === this.f.path ? nav.hit : null
+      // The scroll is rebuilt so the new page starts at its top.
+      this.visible = false
+      await pause(30)
+      this.k = p.k
+      this.paras = p.items.map(i => ({
+        text: i.text,
+        hit: !!hit && i.start < hit.end && i.end > hit.offset
+      }))
+      this.layout()
+      this.progress = (p.k + 1) + ' / ' + p.count
+      this.error = this.f.size <= this.f.bom ? 'הקובץ ריק' : ''
+      this.visible = true
+      setPosition(this.f.path, p.start)
+    },
+    layout() {
+      const max = LINE_PX * 100 / FONT_PX[this.size]
+      const items = []
+      this.paras.forEach(p => {
+        const lines = wrapLines(p.text, max)
+        lines.forEach((t, i) => items.push({ text: t, hit: p.hit, last: i === lines.length - 1 }))
+      })
+      this.items = items
+    },
+    async turn(d) {
+      if (this.busy || !this.f) return
+      const k = this.k + d
+      if (k < 0 || k >= pageCount(this.f.size)) return
+      this.busy = true
+      await this.display(k)
+      this.busy = false
+    },
+    menu() {
+      if (!this.f) return
+      nav.size = this.f.size
+      router.push({ uri: 'menu' })
+    }
+  }
+</script>

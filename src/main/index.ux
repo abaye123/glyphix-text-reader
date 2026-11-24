@@ -1,0 +1,133 @@
+<template>
+  <scroll class="page">
+    <div class="top-space"></div>
+    <text class="title">{{title}}</text>
+    <div if="{{status === 'empty'}}" class="message-box">
+      <text class="message">אין קבצים. העתק קובצי טקסט לתיקיית texts</text>
+    </div>
+    <text if="{{status === 'loading'}}" class="message">טוען...</text>
+    <div if="{{status === 'ok' && !path}}" class="item accent" on:click="search">
+      <text class="item-text dark">חיפוש בכל הקבצים</text>
+    </div>
+    <div if="{{path}}" class="item" on:click="up">
+      <text class="item-text">חזרה לתיקייה הקודמת</text>
+    </div>
+    <div for="r in rows" class="slot">
+      <div if="{{r.dir}}" class="item folder" on:click="open(r.i)">
+        <text class="item-text">{{r.name}}</text>
+      </div>
+      <div if="{{!r.dir}}" class="item" on:click="open(r.i)">
+        <text class="item-text">{{r.name}}</text>
+      </div>
+    </div>
+    <div if="{{more}}" class="item" on:click="showMore">
+      <text class="item-text">הצג עוד</text>
+    </div>
+    <div class="bottom-space"></div>
+  </scroll>
+</template>
+
+<style>
+  .page {
+    width: 466px;
+    height: 466px;
+    background-color: #000000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .top-space { width: 10px; height: 48px; }
+  .bottom-space { width: 10px; height: 100px; }
+  .title {
+    width: 300px;
+    font-size: 32px;
+    color: #62c8ff;
+    text-align: center;
+    margin-bottom: 12px;
+    max-lines: 1;
+    text-overflow: ellipsis;
+  }
+  .message-box { width: 330px; margin-top: 60px; }
+  .message { width: 330px; font-size: 28px; color: #d8d8e8; text-align: center; }
+  .slot { width: 350px; height: 80px; }
+  .item {
+    width: 350px;
+    height: 70px;
+    margin-bottom: 10px;
+    border-radius: 35px;
+    background-color: #1e1e2c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .folder { background-color: #0f3a52; }
+  .accent { background-color: #62c8ff; }
+  .item-text {
+    width: 300px;
+    font-size: 28px;
+    color: #ffffff;
+    text-align: center;
+    max-lines: 1;
+    text-overflow: ellipsis;
+  }
+  .dark { color: #06202e; }
+</style>
+
+<script>
+  import router from '@system.router'
+  import { listDir } from '../lib/files.js'
+  import { loadState, nav } from '../lib/store.js'
+
+  const STEP = 30
+
+  export default {
+    data: { title: 'קורא טקסטים', status: 'loading', path: '', rows: [], more: false },
+    all: [],
+    shown: STEP,
+    onInit() {
+      loadState().then(() => this.load(''))
+    },
+    async load(path) {
+      this.path = path
+      this.title = path ? path.slice(path.lastIndexOf('/') + 1) : 'קורא טקסטים'
+      this.status = 'loading'
+      this.rows = []
+      this.more = false
+      const l = await listDir(path)
+      if (this.path !== path) return
+      this.all = l.dirs.map(d => ({ dir: true, name: d.name, path: d.path }))
+        .concat(l.files.map(f => ({ dir: false, name: f.name, path: f.path })))
+      this.status = this.all.length || path ? 'ok' : 'empty'
+      this.shown = STEP
+      this.render()
+    },
+    render() {
+      this.rows = this.all.slice(0, this.shown).map((r, i) => ({ i: i, dir: r.dir, name: r.name }))
+      this.more = this.all.length > this.shown
+    },
+    showMore() {
+      this.shown += STEP
+      this.render()
+    },
+    open(i) {
+      const r = this.all[i]
+      if (!r) return
+      if (r.dir) {
+        this.load(r.path)
+        return
+      }
+      nav.path = r.path
+      nav.target = null
+      nav.hit = null
+      router.push({ uri: 'reader' })
+    },
+    up() {
+      const i = this.path.lastIndexOf('/')
+      this.load(i < 0 ? '' : this.path.slice(0, i))
+    },
+    search() {
+      nav.searchScope = 'all'
+      router.push({ uri: 'search' })
+    }
+  }
+</script>

@@ -1,0 +1,104 @@
+<template>
+  <scroll class="page">
+    <div class="top-space"></div>
+    <text class="title">גודל גופן: {{size}}</text>
+    <div class="line">
+      <div class="half" on:click="font(1)"><text class="item-text">הגדל +</text></div>
+      <div class="half" on:click="font(-1)"><text class="item-text">הקטן -</text></div>
+    </div>
+    <div class="item accent" on:click="search('file')"><text class="item-text dark">חיפוש בקובץ</text></div>
+    <div class="item" on:click="search('all')"><text class="item-text">חיפוש בכל הקבצים</text></div>
+    <text class="title">מעבר לאחוז: {{percent}}%</text>
+    <div class="line">
+      <div class="quarter" on:click="step(10)"><text class="item-text">+10</text></div>
+      <div class="quarter" on:click="step(1)"><text class="item-text">+1</text></div>
+      <div class="quarter" on:click="step(-1)"><text class="item-text">-1</text></div>
+      <div class="quarter" on:click="step(-10)"><text class="item-text">-10</text></div>
+    </div>
+    <div class="item accent" on:click="go"><text class="item-text dark">עבור</text></div>
+    <div class="bottom-space"></div>
+  </scroll>
+</template>
+
+<style>
+  .page {
+    width: 466px;
+    height: 466px;
+    background-color: #000000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .top-space { width: 10px; height: 56px; }
+  .bottom-space { width: 10px; height: 90px; }
+  .title { width: 300px; font-size: 27px; color: #62c8ff; text-align: center; margin: 6px 0; }
+  .line { width: 350px; height: 78px; display: flex; flex-direction: row; justify-content: center; }
+  .half {
+    width: 165px;
+    height: 68px;
+    margin: 0 5px;
+    border-radius: 34px;
+    background-color: #1e1e2c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .quarter {
+    width: 77px;
+    height: 68px;
+    margin: 0 5px;
+    border-radius: 34px;
+    background-color: #1e1e2c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .item {
+    width: 340px;
+    height: 70px;
+    margin-bottom: 10px;
+    border-radius: 35px;
+    background-color: #1e1e2c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .accent { background-color: #62c8ff; }
+  .item-text { font-size: 27px; color: #ffffff; text-align: center; }
+  .dark { color: #06202e; }
+</style>
+
+<script>
+  import router from '@system.router'
+  import { st, nav, setSize, positionOf } from '../lib/store.js'
+
+  export default {
+    data: { size: 1, percent: 0 },
+    left: false,
+    onInit() {
+      this.size = st.size + 1
+      this.percent = nav.size ? Math.min(99, Math.floor(positionOf(nav.path) * 100 / nav.size)) : 0
+    },
+    onShow() {
+      // Back from a search that jumped: go on to the reader.
+      if (this.left && nav.target !== null) router.back()
+    },
+    font(d) {
+      setSize(st.size + d)
+      this.size = st.size + 1
+    },
+    step(d) {
+      this.percent = Math.max(0, Math.min(100, this.percent + d))
+    },
+    go() {
+      nav.target = Math.min(Math.max(0, nav.size - 1), Math.floor(nav.size * this.percent / 100))
+      nav.hit = null
+      router.back()
+    },
+    search(scope) {
+      this.left = true
+      nav.searchScope = scope
+      router.push({ uri: 'search' })
+    }
+  }
+</script>
